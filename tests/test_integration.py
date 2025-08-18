@@ -477,6 +477,95 @@ def check__mapping_person(
             raise Exception(f"unexpected {src_person_id=} in {observation=}")
 
 
+import importlib.resources
+
+# Get the package root directory
+package_root: Path = Path(str(importlib.resources.files("carrottransform")))
+
+import click.testing as testing
+
+class IntegrationTest():
+    def __init__(self,
+        # a folder that the test can read/write files into
+        tmp_path: Path,
+        # either a path to the person_file, or, a string denoting a relative path in the `tests/test_data/` folder
+        person_file: Path | str,
+        
+        # relative path to the rules_file.json if it's missing we assume there's only one .json sibling of the above person_file path and that .json is the rules file
+        rules_file: str | None = None,
+
+        # optional check of how many people should be in the output
+        persons: int | None = None,
+        # optional check of the measurements values (look for an example test)
+        measurements: dict | None = None,
+        # optional check of the observations values (look for an example test)
+        observations: dict | None = None,
+        # optional check of the conditions values (look for an example test)
+        conditions: dict | None = None,
+
+    
+    ):
+        ##
+        # check the person file
+        if isinstance(person_file, str):
+            if not person_file.startswith("/"):
+                self._person_file = Path(__file__).parent / "test_data" / person_file
+            else:
+                person_file = person_file[1:]
+                self._person_file = package_root / person_file
+
+        if not self._person_file.is_file():
+            raise ValueError(f"person_file {person_file} does not exist")
+
+        # find the only rules file in that folder
+        self._rules_json_file: Path
+        if rules_file is not None:
+            self._rules_json_file = package_root / rules_file[1:]
+        else:
+            rules = [f for f in self._person_file.parent.glob("*.json") if f.is_file()]
+            rules = list(rules)
+            if len(rules) != 1:
+                raise ValueError(
+                    f"expected exactly one json file, found {rules=} in {self._person_file.parent}"
+                )
+            self._rules_json_file = rules[0]
+            
+
+
+        # output dir needs to be pre-created
+        self._output = tmp_path / "itest-out"
+        self._output.mkdir(exist_ok=True)
+        
+        # copy any testing checks
+        self._persons = persons
+        self._measurements = measurements
+        self._observations = observations
+        self._conditions = conditions
+        
+    def execute(self) -> testing.Result:
+        pass
+
+
+    def success(self) -> Tuple[object, Path, dict, dict]:
+
+        raise Exception('???')
+
+    def failure(self) -> Tuple[object, Path]:
+        assert self._persons is None
+        assert self._measurements is None
+        assert self._observations is None
+        assert self._conditions is None
+
+        raise Exception('???')
+
+@pytest.mark.integration
+def test_IntegrationTest(tmp_path: Path):
+    raise Exception(
+        "create a class with overridable methods to handle the weird variations we need to do"
+    )
+
+
+
 @pytest.mark.integration
 def test_sql_read(tmp_path: Path):
     """
